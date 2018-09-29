@@ -1,0 +1,39 @@
+
+//
+mmi_frm_nmgr_balloon  很牛x的弹出框
+
+//
+vcui_phb_list_create
+
+
+//
+    VcpTitleBar *titlebar;
+    VFX_OBJ_CREATE(titlebar, VcpTitleBar, this);
+    titlebar->setTitle(VFX_WSTR_RES(STR_ID_VAPP_GT_NUM));
+    setTopBar(titlebar);
+
+    VFX_OBJ_CREATE(m_toolBar, VcpToolBar, this);
+    m_toolBar->addItem(1, VFX_WSTR_RES(STR_ID_GT_LIST_ADD), VCP_IMG_TOOL_BAR_COMMON_ITEM_ADD);
+    m_toolBar->m_signalButtonTap.connect(this, &VappGTNumPage::onToolBarTapped);
+    setBottomBar(m_toolBar);
+
+
+//组件
+VcpTitleBar 
+VcpForm
+VcpFormItemSwitchCell 
+VcpFormItemLauncherCell
+VcpCommandPopup
+VcpFormItemAidButtonCell
+VcpIndicatorPopup 进度条
+
+//
+VfxApp VfxMainScr  VfxPage
+
+//进入弹出历史
+popPage()
+pushPage()
+
+
+//
+pfnUnicodeStrcpy((S8*)text, (const S8*) GetString(STR_ID_BTMMI_PROF_HF));

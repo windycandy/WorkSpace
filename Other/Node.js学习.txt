@@ -1,0 +1,26 @@
+
+
+
+//
+exepress响应的方法
+post 
+get
+use = post + get
+
+
+//
+Supervisor实现监测文件修改并自动重启应用
+supervisor app.js
+
+http://www.imooc.com/learn/348
+//
+url 
+
+//
+querystring.stringify
+将对象转换成字符串，字符串里多个参数将用 ‘&' 分隔，将用 ‘=' 赋值。
+这个函数的操作和 querystring.parse() 是相反的，
+
+//
+ console.log('get请求参数对象 :',req.query);  
+ console.log('post请求参数对象 :',req.body);  

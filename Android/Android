@@ -1,0 +1,65 @@
+
+1. Android部分Handler机制
+https://blog.csdn.net/ClAndEllen/article/details/79343538
+https://www.cnblogs.com/JohnTsai/p/5259869.html   Android进阶——深入浅出Handler
+
+
+2. 
+a、System.currentTimeMillis()获取的是系统的时间，可以使用SystemClock.setCurrentTimeMillis(long millis)进行设置。
+   如果使用System.currentTimeMillis()来获取当前时间进行计时，应该考虑监听ACTION_TIME_TICK, ACTION_TIME_CHANGED 和 
+   ACTION_TIMEZONE_CHANGED这些广播ACTION，如果系统时间发生了改变，可以通过监听广播来获取。 
+b、SystemClock.uptimeMillis()表示系统开机到当前的时间总数，单位是毫秒，但是，当系统进入深度
+   睡眠（CPU休眠、屏幕休眠、设备等待外部输入）时间就会停止，但是不会受到时钟缩放、空闲或者其他节能机制的影响。 
+c、SystemClock.elapsedRealtime()和SystemClock.elapsedRealtimeNanos()表示系统开机到当前的时间总数。
+   它包括了系统深度睡眠的时间。这个时钟是单调的，它保证一直计时，即使CPU处于省电模式，所以它是推荐使用的时间计时器。
+   
+   
+3.
+汪国全:
+YY 传你大法
+汪国全:
+音乐卡顿
+
+<1> perf-defconfig,或user版本
+CONFIG_SERIAL_MSM_HSL=y
+CONFIG_SERIAL_MSM_HSL_CONSOLE=y
+<2> Low CPU frequency
+<3> High-priority threads with SCHED_FIFO scheduling
+<4> Long scheduling latency
+<5> Interrupts
+汪国全:
+音频卡顿可能和performance有关原因   
+
+
+https://blog.csdn.net/u014702999/article/category/6410190
+--Android音频系统之二音频框架
+--Android音频系统之三AudioTrack
+--Android音频系统之四AudioPolicy
+
+
+system\core\init\init.cpp
+	->property_init                                     property_service.cpp                       
+		->__system_property_area_init					打开/dev/__properties__，共享到内存
+			-> __system_property_area__?                进程启动后数据已经将系统属性数据读取到相应的共享内存中，
+														保存在全局变量__system_property_area__
+		->pa_workspace.fd								打开/dev/__properties__
+	->property_load_boot_defaults                       "/default.prop"加载到内存
+	->start_property_service
+		->property_set_fd = create_socket                                  "/dev/socket"+"property_service"
+		->register_epoll_handler(property_set_fd, handle_property_set_fd);  
+		
+	
+SystemProperties.java
+android_os_SystemProperties.cpp   //JNI
+properties.c  		//property_get和property_set
+system_properties.cpp     //__system_property_get    __system_property_set(设置属性通过异步socket通信，向property_service)
+                            __system_property_area__
+							
+							
+init.rc 
+load_system_props   //property_service.cpp
+
+
+
+
+							

@@ -1,0 +1,36 @@
+Below is the procedure to get the ftrace
+
+1) ftrace logs collection procedure
+
+Step 1: execute the below commands at once.
+adb wait-for-device root
+adb wait-for-device remount
+adb wait-for-device shell
+echo 0 > /d/tracing/tracing_on
+echo 50000 > /d/tracing/buffer_size_kb
+echo "" > /d/tracing/set_event
+echo "" > /d/tracing/trace
+
+echo "timer:* workqueue:* sched:* msm_low_power:* power:* irq:* power:cpu_idle msm_low_power:* power:cpu_frequency power:clock_set_rate power:cpu_frequency_switch_start sched:sched_switch sched:sched_enq_deq_task sched:sched_cpu_load sched:sched_task_load sched:sched_load_balance sched:sched_placement_reason" > /sys/kernel/debug/tracing/set_event
+echo "*:*" > /sys/kernel/debug/tracing/set_event
+cat /d/tracing/set_event
+
+Step 2:
+Before going to step3 ensure that buffer size is set to 50000, if 50000 is not set then set to 40000 or still lower.
+cat /d/tracing/buffer_size_kb
+
+Step 3:
+sleep 100 && echo 1 > /d/tracing/tracing_on && sleep 20 && echo 0 > /d/tracing/tracing_on &
+
+Step 4:
+Once the above commands (in step1 , 2 and 3) are executed and now disconnect the USB, also make sure you start the use case (here the use case is scroll) within 10 secs.
+
+Step 5:
+Give the below mentioned commands before connecting the USB and once you completed the 20 secs then connected the USB.
+adb wait-for-device
+adb shell "cat /d/tracing/tracing_on"
+adb shell "echo 0 > /d/tracing/tracing_on"
+adb shell "cat /d/tracing/tracing_on"
+adb shell "cat /d/tracing/trace > /data/local/tmp/trace.txt"
+adb pull /d/tracing/trace trace.txt
+

@@ -1,0 +1,19 @@
+
+pm2 gracefulReload package.json
+
+pm2 logs  --log-date-format="YYYY-MM-DD HH:mm Z"
+
+
+部署环境(主机)： 10.120.1.36
+数据库使用研发数据库： 10.120.1.37
+推流地址 ： 10.120.10.49
+
+
+g.livestream.sioeye.cn 10.120.10.49 
+推流地址 已经配置好
+
+
+已经部署appserver_for_CN -10.120.1.36:3001，数据库使用研发数据库-10.120.1.37
+绑定域名：https://api.siocloud.sioeye.cn/
+
+ 

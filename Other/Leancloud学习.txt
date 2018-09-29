@@ -1,0 +1,61 @@
+
+
+
+
+
+//云端定义函数
+AV.Cloud.define('averageStars', function(request, response) {
+ var query = new AV.Query('_User');
+ var arrayObj = new Array();
+ 
+  //query.equalTo('foo', request.params.movie);
+  console.log("AV.Cloud.define >>>>>");
+  query.find({
+    success: function(results) {
+      var sum = 0;
+	  
+      for (var i = 0; i < results.length; ++i) {
+        //sum += results[i].get('stars');
+		console.log("AV.Cloud.define >>>>>",results[i].get('username'));
+		arrayObj.push(results[i].get('username'));
+      }
+	  
+      response.success(arrayObj);
+    },
+    error: function() {
+      response.error('查询失败');
+    }
+  });
+});
+
+
+//app use
+       AVCloud.callFunctionInBackground("averageStars", dicParameters, new FunctionCallback() {
+            public void done(Object object, AVException e) {
+                if (e == null) {
+                    Log.d("DONGYIN","AVOSCloud ok" + object.toString());
+                    Toast.makeText(MainActivity.this,object.toString(),Toast.LENGTH_LONG).show();
+                } else {
+                    Log.d("DONGYIN","AVOSCloud fail");
+                }
+            }
+        });
+
+		
+		
+		
+//AVUser数据自定义其他字段，
+ public void imLogin() { //客户端的修改,更新,获取
+        LeanchatUser.getCurrentUser().put("test_name","88888");
+
+        try {
+            LeanchatUser.getCurrentUser().save();
+        }catch (AVException E){
+            Log.d("DONGYIN", "imLogin >>>> ");
+        }
+
+        LeanchatUser.getCurrentUser().updateUserInfo();
+        
+        Log.d("DONGYIN", "imLogin : " + LeanchatUser.getCurrentUser().get("test_name"));
+    }
+		

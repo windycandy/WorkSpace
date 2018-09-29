@@ -1,0 +1,196 @@
+
+问题：
+Bug 58733-【性能】灭屏待机后按power键,概率出现不会立即亮屏。
+
+
+原因：
+上层开启sensor监听时，底层会开启一个线程周期性读取sensor数据，上层不取消监听则该线程会一直周期性读取，
+当按power键系统休眠，该线程也休眠。按power键系统唤醒时，该线程继续运行，如果读取的时候，
+刚好iic总线还没有准备好，那么就会造成超时，等超时过后线程释放掉iic总线资源，后续的设备才能获取iic总线继续执行resume动作。
+此超时为2秒，跟亮屏慢的时间大致吻合。
+
+现在更新后的做法是这个功能，灭屏即断开sensor监听；亮屏开启监听，读取数据
+
+
+>>>>>>>> 对sensor的监听registerListener之后，在灭屏的时候也要进行unregisterListener，
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+1 2s的延时谁造成
+通过初步分析,发现power 按键按下后,kernel可以及时给出,但到上层就已经是2s以后
+在
+frameworks/native/services/inputflinger/EventHub.cpp
+frameworks/base/services/core/jni/com_android_server_input_InputManagerService.cpp
+和
+frameworks/native/services/inputflinger/InputReader.cpp 打开对应的调试开关,类似
+#define LOG_NDEBUG 0 
+按键是在InputReader::loopOnce函数中调用size_t count = mEventHub->getEvents(timeoutMillis, mEventBuffer, EVENT_BUFFER_SIZE);
+被读取在frameworks/native/services/inputflinger/EventHub.cpp的size_t EventHub::getEvents(int timeoutMillis, RawEvent* buffer, size_t bufferSiz
+中的
+int pollResult = epoll_wait(mEpollFd, mPendingEventItems, EPOLL_MAX_EVENTS, timeoutMillis); 进行等待按键的到来
+timeoutMillis在这是-1,也就是一直等待代码的关键是status_t EventHub::openDeviceLocked(const char *devicePath) {中
+epoll_ctl(mEpollFd, EPOLL_CTL_ADD, fd, &eventItem这里设置了epoll的事件在void NativeInputManager::interceptKeyBeforeQueueing(const KeyEvent* keyEvent,
+开始添加如下类似代码
+    nsecs_t now = systemTime(SYSTEM_TIME_MONOTONIC);  
+    nsecs_t b=keyEvent->getDownTime();
+    nsecs_t a=(now-b)/1000000000;
+    ALOGE("aaaa a=%lld now=%lld getKeyCode=%d getAction=%d getFlags=%d getScanCode=%d  getMetaState=%d   getDownTime=%lld getEventTime=%lld\n",
+          a,now,
+          keyEvent->getKeyCode(),keyEvent->getAction(),keyEvent->getFlags(),keyEvent->getScanCode(),
+                        keyEvent->getMetaState(), keyEvent->getDownTime(), keyEvent->getEventTime()); a=%lld这个就是打印的得到事件和实际时间发送时间的差,这里用来确定,是framework转发慢了,还是得到的时候就慢了
+通过查log,可看到类似如下log /mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180213/main_log:7016:12-31 18:06:25.047443   847  1035 E InputManager-JNI: aaaa a=2 now=181318314779 getKeyCode=26 getAction=0 getFlags=8 getScanCode=116  getMetaState=0   getDownTime=179300195000 getEventTime=179300195000
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180213/main_log:7023:12-31 18:06:25.062247   847  1035 E InputManager-JNI: aaaa a=2 now=181333126318 getKeyCode=26 getAction=1 getFlags=8 getScanCode=116  getMetaState=0   getDownTime=179300195000 getEventTime=179450148000 
+a=2,也就是framework接到的时候就已经满了2s,所以基本和上层没有啥关系
+
+在kernel-3.18/drivers/input/input.c中的void input_event(struct input_dev *dev, 
++               if(EV_KEY==type)
++                       {
++                       printk("aaa type=%d code=%d,value=%d\n",type,code,value);
++               }
+                input_handle_event(dev, type, code, value);
+                spin_unlock_irqrestore(&dev->event_lock, flags);
++               if(EV_KEY==type)
++                       {
++                       printk("bbb type=%d code=%d,value=%d\n",type,code,value);
++               } 
+可以看到基本按键及时发出,没有延迟,也不是input的输入端造成的问题,那问题可能在系统唤醒.重新查看kernel,在对应a=2地方的log发现类似 
+12-31 18:03:03.671090   906   906 I [  179.330303]: (3)[906:system_server][Gsensor] mc3xxx_resume 
+12-31 18:03:05.612461  4116  4116 E [  181.271674](0)[4116:kworker/0:3]ERROR,507: id=2,addr: 4c, transfer timeout
+12-31 18:03:05.612480  4116  4116 E [  181.271693]: (0)[4116:kworker/0:3]I2C(2) dump info++++++++++++++++++++++ 
+transfer timeout 值得怀疑,而且时间差不多是2s
+检查kernel-3.18/drivers/misc/mediatek/i2c/mt6735/i2c.c
+在mt_i2c_probe函数中有
+ i2c->adap.timeout = 2 * HZ; /*2s */
+和超时时间2s吻合 2 为什么会造成延时
+继续加入log进行检查,发现有如下log
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11361:12-31 18:03:09.439712   895   895 W [  185.099093]: (0)[895:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11363:12-31 18:03:09.439755   895   895 W [  185.099136]: (0)[895:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11365:12-31 18:03:09.439797   895   895 W [  185.099178]: (0)[895:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11367:12-31 18:03:09.439839   895   895 W [  185.099220]: (0)[895:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11423:12-31 18:03:09.475028  4275  4275 W [  185.134409]: (0)[4275:kworker/0:3]_i2c_write_reg
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11425:12-31 18:03:09.475468  4275  4275 W [  185.134849]: (0)[4275:kworker/0:3]_i2c_write_reg
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11427:12-31 18:03:09.475807  4275  4275 W [  185.135188]: (0)[4275:kworker/0:3]_i2c_write_reg
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11442:12-31 18:03:09.483211   895   895 W [  185.142592]: (1)[895:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11444:12-31 18:03:09.483246   895   895 W [  185.142627]: (1)[895:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11446:12-31 18:03:09.483280   895   895 W [  185.142661]: (1)[895:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180156/kernel_log:11448:12-31 18:03:09.483315   895   895 W [  185.142696]: (1)[895:system_server]aaaa mt_i2c_resume 
+可以发现mt_i2c_suspend的时候,有_i2c_write_reg进行传输,同时dump中的信息可以看到
+12-31 18:03:05.612566     0     0 E [  181.271779]: [I2C]SLAVE_ADDR=bf,INTR_MASK=ff,INTR_STAT=0,CONTROL=0,TRANSFER_LEN=1
+而不是写之前的地址152
+12-31 18:03:03.619911   906   906 W [  179.279124]: (3)[906:system_server]OFFSET_SLAVE_ADDR=152  <==加速度传感器的地址4c<<1
+查规格书
+11007004 SLAVE ADDR Slave Address Register
+默认/reset值是 10111111 <==0xbf
+至此可以断定,iic还在sleep的时候,进行了iic总线的读写,导致地址寄存器/以及其他寄存器根本没有写进去,最终导致2s的超时 
+3关于休眠顺序
+系统的休眠顺序是gsensor休眠,accel(采用late_initcall注册的),iic休眠,接着进行休眠,唤醒刚好相反
+休眠的时候acc_suspend 中并没有类似调用acc_enable_data(0);也就是acc_work_func依然可能在读取数据,导致超时 mc3xxx_get_data实际上在工作者队列中被调用,由于acc_register_data_path注册后,通过指针调用 /mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:14830:12-31 18:03:21.185048    53    53 E [  191.961711](3)[53:pmic_thread]kpd: Power Key generate, pressed=1
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:14874:12-31 18:03:21.315098    53    53 E [  192.091761](0)[53:pmic_thread]kpd: Power Key generate, pressed=0
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15075:12-31 18:03:22.271203   232   232 I [  193.047866](1)[232:surfaceflinger]mtk-tpd: LCD OFF Notify
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15190:12-31 18:03:23.536818   899   899 I [  194.313481]: (0)[899:system_server][Gsensor] mc3xxx_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15199:12-31 18:03:23.541033   899   899 W [  194.317696]: (0)[899:system_server]aaaa acc_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15215:12-31 18:03:23.542332   899   899 W [  194.318995]: (0)[899:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15217:12-31 18:03:23.542374   899   899 W [  194.319037]: (0)[899:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15219:12-31 18:03:23.542415   899   899 W [  194.319078]: (0)[899:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15221:12-31 18:03:23.542456   899   899 W [  194.319119]: (0)[899:system_server]aaaa mt_i2c_suspend
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15228:12-31 18:03:23.543422   726   726 E [  194.320085]: (0)[726:kworker/0:2][Gsensor] mc3xxx_get_data 3391 : Perform  in suspend state!!
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15290:12-31 18:03:23.585777   899   899 W [  194.362440]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15292:12-31 18:03:23.585812   899   899 W [  194.362475]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15294:12-31 18:03:23.585847   899   899 W [  194.362510]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15296:12-31 18:03:23.585882   899   899 W [  194.362545]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15314:12-31 18:03:23.587332   899   899 W [  194.363995]: (1)[899:system_server]aaaa acc_resume 2
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:15326:12-31 18:03:23.592491   899   899 I [  194.369154]: (1)[899:system_server][Gsensor] mc3xxx_resume   /mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8923:12-31 18:02:52.765273    53    53 E [  163.541936](0)[53:pmic_thread]kpd: Power Key generate, pressed=1
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8942:12-31 18:02:52.786063   899   899 W [  163.562726]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8944:12-31 18:02:52.786098   899   899 W [  163.562761]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8946:12-31 18:02:52.786133   899   899 W [  163.562796]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8948:12-31 18:02:52.786168   899   899 W [  163.562831]: (1)[899:system_server]aaaa mt_i2c_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8959:12-31 18:02:52.787643   726   726 E [  163.564306]: (0)[726:kworker/0:2][Gsensor] mc3xxx_get_data 3391 : Perform  in suspend state!!
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8968:12-31 18:02:52.791152   899   899 W [  163.567815]: (1)[899:system_server]aaaa acc_resume 2
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:8980:12-31 18:02:52.796224   899   899 I [  163.572887]: (1)[899:system_server][Gsensor] mc3xxx_resume
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:9029:12-31 18:02:52.905300    53    53 E [  163.681963](0)[53:pmic_thread]kpd: Power Key generate, pressed=0
+/mnt/hgfs/r/1/mobilelog/APLog_2016_1231_180157/kernel_log:9150:12-31 18:02:53.246884   232   232 I [  164.023547](0)[232:surfaceflinger]mtk-tpd: LCD ON Notify     4解决方法
+a 在屏灭的时候不注册gsensor的监听,这样1 可以解决问题,2可以减少电流消耗. b 但对于kernel来说,不应该依靠上层,需要在gsensor休眠的时候,读取加速度直接返回错误,而不是等待
+2s的超时,直接告知系统正在休眠,没有数据
+kernel-3.18/drivers/misc/mediatek/accelerometer/mc3xxx_auto/mc3xxx.c的被注册得到数据的函数mc3xxx_get_data中加入类似  struct mc3xxx_i2c_data *obj = i2c_get_clientdata(client);
+ if(atomic_read(&obj->suspend)) {
+   GSE_ERR("Perform  in suspend state!!\n");
+   return -EINVAL;
+  }
+本函数还有问题,其实还应该加MC3XXX_MUTEX_LOCK进行保护或者在读取数据的时候static int MC3XXX_ReadSensorData(struct i2c_client *pt_i2c_client, char *pbBuf, int nBufSize)函数
+ if (false == mc3xxx_sensor_power) {
+  if (MC3XXX_RETCODE_SUCCESS != MC3XXX_SetPowerMode(pt_i2c_client, true))
+   GSE_ERR("ERR: fail to set power mode!\n");
+ }
+直接返回错误,而不是打开电源,这不是它该做的事情,然后再对应修改mc3xxx_get_data 对于其他的gsensor也应做类似处理. c 直接修改kernel-3.18/drivers/misc/mediatek/i2c/mt6735/i2c.c的驱动,在i2c正在休眠的时候不可以进行数据取得,mtk的代码还需要优化
+
+
+
+
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+ps:
+[FAQ19302] Power键不亮屏分析方法  --按键唤醒的log关键点
+
+kernel-Check Point【1】：kernel 上报power key[kernel log]
+
+[53:pmic_thread]kpd: Power Key generate, pressed=0
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【2】：上层收到按键事件[eng版本上才有此log，main_log]
+
+11-21 16:57:31.001050 1020 1262 D WindowManager: interceptKeyTq keycode=26 ...
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【3】：PMS的wakeUp被调用[sys_log]
+
+16:57:31.011153 1020 1262 I PowerManagerService: Waking up from sleep (uid 1000)...
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【4】：准备绘制界面[sys_log]
+
+11-21 16:57:31.022639 1020 1044 I DisplayPowerController: Blocking screen on until initial contents have been drawn.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【5】：第一个wiating for drawn表示keyguard画完，开始画window[sys_log]
+
+11-21 16:57:31.062667 1020 1041 I WindowManager: Waiting for drawn Window{6732b98 u0 com.android.settings/com.android.settings.SubSettings}: 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+check Point【6】：底层resume时间L版本 setAutoSuspend/M版本 setPowerMode【main_log】
+
+ 注意：这个log出现的时间点不是固定的，要看底层resume的时间
+
+16:57:31.436586 1020 1301 D SurfaceControl: Excessive delay in setPowerMode(): 403ms【M 版本】
+
+15:41:07.827 911 2234 D PowerManagerService-JNI: Excessive delay in autosuspend_disable() while turning screen on: 424ms【L版本】
+
+Check Point【7】：绘制界面完成及花费的时间[sys_log]
+
+11-21 16:57:31.431161 1020 1044 I DisplayPowerController: Unblocked screen on after 409 ms
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【8】：上层设置背光[sys_log]
+
+11-21 16:57:31.443164 1020 1044 D DisplayPowerState: Requesting new screen state: state=ON, backlight=211
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【9】：底层设置背光[sys_log,亮屏时间=power key到此处的时间，不一定每个版本都有此log，kernel log]
+
+提示：如果出现此log表示屏幕已经点亮
+
+<7>[ 553.658233] (3)[1301:PhotonicModulat][name:leds&][LED]Set Backlight directly 211 at time 4294992661, mapping level is 211
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Point【10】：亮屏操作完成[sys_log]
+
+11-21 16:57:31.556750 1020 1044 D DisplayPowerController: Finished business...

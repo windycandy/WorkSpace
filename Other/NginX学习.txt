@@ -1,0 +1,85 @@
+
+
+
+//
+启动
+usr/local/ngnix/nginx  –c  /usr/local/nginx/nginx.conf
+
+重启
+/usr/local/nginx/sbin/nginx  -s reload
+kill -HUP  进程号
+
+
+//
+停止
+
+从容停止:
+kill -QUIT  进程号    
+
+快速停止:
+kill -TERM  进程号
+kill -INT  进程号
+
+强制停止:
+pkill -9 nginx
+
+
+//
+平滑升级
+kill -USR2 进程号   
+
+//
+验证配置文件是否正确
+/usr/local/nginx/sbin/nginx  -t
+
+//
+log_format  log日志配置
+
+
+//
+access_log  log路径
+access_log  off  关闭
+
+
+//
+日志进行切割1：
+nginx得到信号之后，会重新新建一个access.log 文件
+kill -USR1 $(cat /usr/local/nginx/nginx.pid) //进程号 
+
+日志进行切割2（定时自动）：
+cutlog.sh
+crontab -e //定时处理文件    
+23 59 *** /bin/bash  cutlog.sh文件路径   //23:59分执行操作
+  
+  
+  
+//
+缓存配置
+conf文件的http sever中,如：
+locatton  ~. *\.(jpg|png)${
+expires 30d;
+}
+
+
+//
+打开目录浏览功能(autoindex)
+autoindex on;
+
+
+
+
+
+//什么是反向代理与负载均衡
+//Nginx 负载均衡的实现
+//HTTP Upstream 模块     ip_hash/server/
+
+
+
+//
+自启动
+vi /etc/rc.local
+
+
+
+
+  

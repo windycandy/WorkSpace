@@ -1,0 +1,39 @@
+
+
+//文档数据库   
+ 
+//sudo  apt-get install mongodb
+ 
+  
+//mongod --dbpath=/home/ckt/work/tools/db --port=27017 
+
+
+//netstat -anp|more
+可以看到客户端还保持着与服务器的连接
+
+杀死953进程root@wangyuyu-Vostro-1440:/usr/bin# kill -9 953
+
+
+//mongod  --shutdown
+
+
+
+
+//////客户端工具进入：mongo
+show dbs
+show collections
+
+
+//insert/find/update/save/remove
+
+
+
+//Node.js 实践:Mongoose 使用进阶
+setter 
+getter
+
+
+
+
+
+
