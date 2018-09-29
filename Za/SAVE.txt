@@ -1,0 +1,515 @@
+//
+sudo update-alternatives --config jar
+sudo update-alternatives --config javah
+sudo update-alternatives --config javadoc
+sudo update-alternatives --config java
+sudo update-alternatives --config javac
+
+//
+raw数据获取：
+高通：
+adb root 
+adb remount 
+adb shell chmod 777 /data/misc/camera 
+adb shell setprop persist.camera.raw_yuv 1 
+adb shell setprop persist.camera.snapshot_raw 1 
+adb shell setprop persist.camera.dumpimg 20 
+adb shell setprop persist.camera.raw.format 30 
+data/misc/camera 
+
+mtk：
+adb shell setprop debug.camera.dump 1
+
+
+//
+使用adb shell kill -3 <pid of Gallery>生成一个traces log，该log位于/data/anr目录下 ???
+我使用ddmsf查看线程运行情况：在ActionHandler.java里面的updateSupportedOperation()方法里面，当gallery变灰时if (canSharePanoramas) 
+{ 
+supportCallback.waitForPanoramaSupport(); 
+} 
+在这里一直在wait();当我去掉这个判断时，这个问题就没有复现了
+
+
+
+//
+alias droot='adb shell setprop ro.debuggable 1'
+
+//
+用下面两条命令打开对应算法的日志，
+adb root  //打开命令要有root权限
+adb shell setprop persist.camera.stats.debug.mask  <value>   
+其中<value>是十进制数值，其定义如下
+typedef enum {  
+STATS_DEBUG_MASK_AEC_LOG   = (1 << 0),   //<value> 1   //曝光
+STATS_DEBUG_MASK_AWB_LOG   = (1 << 1),   //2  //白平衡
+STATS_DEBUG_MASK_AF_LOG   = (1 << 2),   //4   //对焦
+STATS_DEBUG_MASK_ASD_LOG   = (1 << 3),   //8   //自动场景选择
+STATS_DEBUG_MASK_AFD_LOG   = (1 << 4),   //16   //工频干扰消除
+} stats_debug_mask_type;  
+
+注意，以上是按二进制位的方式来确定的，单独打开一个会关闭其它。
+如以下同时打开aec, awb, af三都算法日志
+adb root  //打开命令要有root权限
+adb shell setprop persist.camera.stats.debug.mask  7  
+
+
+//https://us.codeaurora.org/cgit/quic/la/platform/packages/apps/Gallery2/log/?h=LA.UM.5.3_rb1.1 
+
+//Log.e("DONGYIN","Function:setMobileDataEnabled", new Throwable("setMobileDataEnabled"));
+
+//
+if(name.equals(Settings.System.SCREEN_OFF_TIMEOUT)){ //add 
+Log.d(TAG,"name = "+ name+ "value = "+value,new Exception("Settings"));//////////add 
+} //add end 
+
+//
+echo 1 > /sys/devices/system/cpu/cpu1/online (打開CPU1) 
+
+//
+PowerManagerService.java
+Going to sleep due
+setLight_native: light //设置背光 
+interceptKeyTq keycode=26 //电源键按下 
+
+
+//
+usb serial_string 这里不能带空格，否则 豌豆荚连接不上，
+ro.product.device, 刚才加了空格不能连接play store
+
+
+//
+查看memory 使用情况请用adb shell procrank -u >procrank.txt
+请在对应process的memory 占用量超过200M 后再抓，因为只有在消耗memory过多时，才可能是已经发生memory leak 的时候，过早抓取hprof文件无助于问题的分
+
+
+//git 
+git tag 200 -m "[affiliate branch] xs01b_s12a
+
+客户基本需求的第一个版本"
+git push --tags
+
+
+git reset c9c6436b715973a29f558e960911c75a579b699e --  mediatek/config/ckt89_we_jb2/ProjectConfig.mk
+git checkout  mediatek/config/ckt89_we_jb2/ProjectConfig.mk
+
+
+//
+adb shell proc/meminfo >meminfo.txt 
+adb shell procrank -u >procrank.txt 
+
+
+
+//
+---[MTK]写在data/app下的某个目录下是不会被删除的，具体为：
+1. 要保证这个APK是系统apk且是自己写的
+2. 修改init.rc，创建一个可读写目录
+mkdir /data/app/backdata
+chown system system /data/app/backdata
+chmod 0777 /data/app/backdata
+3. APK就使用此目录/data/app/backdata保存数据
+4.在projectconfig.mk设置MTK_SPECIAL_FACTORY_RESET=yes
+这个数据在恢复出厂设置都不会被删除。
+
+
+//
+暂停时间延长2秒和延长等待时间两个选项就是对于，p和w的。
+
+//
+老碰到一些bug，说声音重叠，如播放Music的同时，FM也在播放，下面AudioManager 类有些方法，可能会有用； 
+AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE); 
+am.isBluetoothScoAvailableOffCall(); 
+am.isBluetoothA2dpOn(); 
+am.isBluetoothScoOn(); 
+am.isMusicActive(); //判断Music是否在播放 
+am.isMicrophoneMute(); 
+am.isSpeakerphoneOn(); 
+am.isWiredHeadsetOn();//判断耳机是否就位   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /> 
+am.isFmActive(); //判断FM是否在播放，@hide的方法，使用的时候会报错 
+
+phoneRecorder.ismFlagRecord()
+
+
+//ContentUris.withAppendedId(uri, rowId).toString()  例得到content://media/internal/audio/media/32
+
+//
+android:ellipsize = "end"　　  省略号在结尾
+android:ellipsize = "start" 　　省略号在开头
+android:ellipsize = "middle"     省略号在中间
+android:ellipsize = "marquee"  跑马灯
+最好加一个约束android:singleline = "true"
+
+当然也可以用代码语句
+setEllipsize(TextUtils.TruncateAt.valueOf("END"));
+setEllipsize(TextUtils.TruncateAt.valueOf("START"));
+setEllipsize(TextUtils.TruncateAt.valueOf("MIDDLE"));
+setEllipsize(TextUtils.TruncateAt.valueOf("MARQUEE"));
+
+
+//
+getApplicationContext
+  
+//
+SQLiteDatabase.insert 需要插入的是表名
+
+
+//
+ArrayAdapter   单行使用，ListVeiw用来展示列表的View，即要在ListVeiw上使用
+simpleAdapter  使用simpleAdapter的数据用一般都是HashMap构成的List，list的每一节对应ListView的每一行（如List<Map<String, Object>> list ）
+Listview得到Click值的方法			
+HashMap<String,Object> map=(HashMap<String,Object>)arg0.getItemAtPosition(arg2); 
+String title=(String) map.get("key"); 
+
+//
+emulator -data foo
+
+//
+   <style name ="style1">
+   <item name = "android:textColor">#FF0000</item>
+   <item name = "android:textSize">16pt</item>
+   </style>
+  
+//
+120px      px(pixels)——像素
+120dip     dip(device independent pixels)——设备独立像素；等同于dp
+120pt      pt(points)——磅：1pt = 1/72英寸
+android:textSize="18sp"   sp(scaled pixels—best for text size)——带比例的像素。
+建议使用sp作为文本的单位，其它用dip
+
+//
+CharSequence和char数组有些类似
+
+//
+Android获取屏幕分辨率及DisplayMetrics类 
+
+
+//
+requestWindowFeature(Window.FEATURE_NO_TITLE);
+getWindow().setFlags(WindowManager.LayoutParams. FLAG_FULLSCREEN ,      WindowManager.LayoutParams. FLAG_FULLSCREEN);
+android:theme="@android:style/Theme.NoTitleBar.Fullscreen"  全屏
+
+//
+getExternalStorageState  状态
+Environment.getExternalStorageDirectory()  T卡路径
+
+//
+Intent intent = new Intent("android.intent.action.CALL", Uri.parse("tel:"+inputnum));  call/电话
+startActivity(intent)
+
+//
+smsManager.sendTextMessage(inputnum, null, msgcontentString, sendIntent, null);    sms/短信
+
+
+//
+EditText.addTextChangedListener  监听编辑内容长度等变化
+
+//权限
+"android.permission.CALL_PHONE"
+"android.permission.SEND_SMS"
+"android.permission.VIBRATE"
+<uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+
+
+//
+BroadcastReceiver中启动Activity必须加入Intent.FLAG_ACTIVITY_NEW_TASK标签，否则会报错
+
+//
+Android数据的四种存储方式SharedPreference、SQLite、Content Provider和File
+
+//
+getSystemService(Context.AUDIO_SERVICE)  静音，震动，1~7 
+Context.ALARM_SERVICE
+
+
+
+//电池电量
+registerReceiver(battryBroadcastReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+
+
+//AutoCompleteTextView 自动候选 
+
+//onTouchEvent()  触摸
+
+//
+FeatureOption.MTK_GEMINI_SUPPORT  判断单双卡
+
+//取出文件类型
+String end=filename.substring(filename.lastIndexOf(".")+1,
+        		filename.length()).toLowerCase();
+
+//短信，电话本，通话记录查询
+context.getContentResolver().query(ContactsContract.Contacts.CONTENT_URI,
+context.getContentResolver().query(Calls.CONTENT_URI,
+context.getContentResolver().query(Uri.parse("content://sms"),
+
+//
+onAttachedToWindow ()  捕获home键
+
+//DialtactsActivity.java TAB拨号界面，电话本，通话记录
+
+//string2.replaceAll("W", "d")
+
+//android:layout_weight="2"  显示所占比重
+
+//SELinux 策略规则(te 文件生成方法)
+audit2allow -i avc_log.txt 
+
+//
+adb reboot bootloader
+Fastboot flash boot boot.img
+Fastboot flash system system.img
+Fastboot flash userdata userdata.img	
+Fastboot reboot
+
+fastboot oem unlock
+fastboot oem unlock-go 
+fastboot oem ckt-unlock    aboot.c
+
+//
+SubscriptionManager
+
+//
+setLight_native: light //设置背光 
+interceptKeyTq keycode=26 //电源键按下 
+
+//
+jarsigner -verify -verbose -certs SettingsProvider.apk >SettingsProvider.txt 
+
+//
+Band 1:2100
+Band 2:1900
+Band 5:850
+Band 8:900
+
+
+////Android下设置CPU核心数和频率
+http://ju.outofmemory.cn/entry/140884
+
+stop mpdecision
+stop MPDecision
+
+echo 0 > /sys/devices/system/cpu/cpu1/online # 关闭该CPU核心
+echo "1" > /sys/devices/system/cpu/cpu1/online # 打开该CPU核心
+
+echo userspace > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+看CPU支持哪些频率:
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies
+
+echo 800000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_setspeed
+
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq
+
+echo 800000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq # 设置最大频率
+echo 800000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq # 设置最小频率
+
+cat /proc/interrupts
+
+cat /sys/devices/system/cpu/online 可以显示你的当前工作的cpu数。 
+
+stop mpdecision
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+编译：
+make -j8 2>&1 | tee ~/build.log
+
+source ./build/envsetup.sh
+lunch
+make -j8 2>&1 | tee ~/build.log
+
+mmm packages/app/Contact
+make -j8 Contact
+
+mediatek\custom\common\kernel\lcm\r63315_fhd_dsi_vdo_truly
+./mk r lk;./mk k
+下载lk.bin和boot.img
+
+//
+编译recovery.img的方法如下： 
+./makeMtk mm bootable/recovery/ 
+./makeMtk r kernel 
+./makeMtk -opt=ONE_SHOT_MAKEFILE=build/target/board/Android.mk r recoveryimage 
+
+//
+custom_MemoryDevice.h
+./mk n pl
+
+//
+mediatek\custom\common\hal
+./mk systemimage
+
+//
+董银(D22211) 2014-02-19 15:46:26
+mediatek\external\ipod修改这个，用什么命令快啊
+柳火军(D22303) 2014-02-19 15:47:16
+./mk mm mediatek\external\ipod
+或者./mk n dr ipod
+柳火军(D22303) 2014-02-19 15:48:56
+/out/target/product/ckt82_we_jb5/system/bin/ipod
+push到 /system/bin/ipod
+如果不行就只能./mk systemimage
+
+//
+董银(D22211) 2013-11-12 20:40:32
+修改了mediatek/custom/ckt89_we_jb2/kernel/dct/dct/codegen.dws
+柳火军(D22303) 2013-11-12 20:40:55
+./mk n pl lk k;./mk bootimage
+
+
+//new 
+./mk ckt73_gb n
+./mk r dr framework  修改framework的就执行
+
+//
+framework里面的东西 一般是r
+app里面的东西  r对应的模块就好  ./mk ckt73_gb n dr LauncherPro
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+adb/log相关：
+adb shell dumpsys media.camera -v 1
+
+adb logcat -b main -b system -b events -v time > log.txt
+
+adb shell;  getevent  /dev/input/eventN
+
+
+请帮忙使用下边的adb命令打开ams service的log开关后再重新复现问题抓取log： 
+adb shell dumpsys activity log s on 
+
+通过QPST--Memory Debug App抓取的RAMdump
+1. Use HW method: PS_HOLD 
+2. sw CMD: sleep 60 && echo c > /proc/sysrq-trigger & 
+ 
+ 
+systrace: http://blog.csdn.net/adagio1983/article/details/48496653  
+ 
+CatchLog工具
+QXDM: QXDM   https://createpoint.qti.qualcomm.com/tools/#suite/0b01003980b92313/0b01003981b0a895
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+git/repo相关：
+
+repo init -u szgit@10.240.2.41:msm/platform/manifest.git <mailto:szgit@10.240.2.41:msm/platform/manifest.git>  --repo-url=szgit@10.240.2.41:git-repo.git <mailto:--repo-url=szgit@10.240.2.41:git-repo.git>  -b release -m a_sw3_testing_LNX.LA.3.7.3.1-02710-8939.0.xml
+repo sync
+
+ckt@ubuntu:~/work/pro/spirit01a_p10/msm8939-la-2-1_modem/LINUX/android$ 
+repo forall -p -c git checkout -b spirit01a_p10_imobile remotes/origin/spirit01a_p10_imobile
+
+git commit后，请再执行git pull --rebase，再git push
+
+苏海龙 (D22228) 2015-4-8 15:38:40
+@大家 可以不用删除掉原来的代码， 黄建辉说来对。     modem代码就找一下分支remote/origin/spirit01a_p10_imobile, 如果没有可以执行git fetch origin 一下 
+苏海龙 (D22228) 2015-4-8 15:39:13
+AP代码 只要执行一下， repo init -u szgit@10.240.2.41:msm/platform/manifest.git --repo-url=szgit@10.240.2.41:git-repo.git -b release -m spirit01a_p10_imobile_MSM8939.LA.2.1.xml，再执行repo sync 
+
+
+git reset --hard 
+
+git reset c9c6436b715973a29f558e960911c75a579b699e --  mediatek/config/ckt89_we_jb2/ProjectConfig.mk
+git checkout  mediatek/config/ckt89_we_jb2/ProjectConfig.mk
+
+//git tag
+git tag ZERA01A-S10A_MEDION_L13EN_307_141225  -m "[affiliate branch] zera01a_s11a
+
+307软件版本"
+
+
+git status -uno -s
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+CTS Gms包：
+work/pandoraplus_cts/android-cts-4.2_r4-linux_x86-arm/android-cts/tools
+run cts -p android.telephony 
+run cts -c android.telephony.cts.TelephonyManagerTest -m testGetDeviceId 
+
+GMS包安装方式如下（Linux环境）： 
+1..当前路径下解压gapps-lp-20150222-signed.zip 并新建目录Gms 
+2. 将解压后的system目录拷贝至Gms目录, 
+3. 设置环境变量 ：export ANDROID_PRODUCT_OUT=Gms 
+4. adb sync system. 该命令会将解压出来的system目录拷贝至手机中 
+5. adb reboot
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+#android_linux命令
+grep -r "string"  *   //当前目录层查找包含某个string的文件
+find . -iname string  //查找某个文件 （不区分大小写）
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+APK签名：
+向志红 14:12:41
+  执行命令: java -jar signapk.jar platform.x509.pem platform.pk8  your.apk your_signed.apk
+向志红 14:12:47
+  密钥文件：进入build/target/product/security ,找到【platform.pk8】和【platform.x509.pem】系统默认使用的密钥。
+signapk工具：进入build\tools\signapk找到SignApk.java，运行 javac或者直接mm编译。
+signapk.jar的源码位置build/tools/signapk，编译以后生成的文件路径：out/host/linux-x86/framework/signapk.jar
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+差分包制作步骤
+
+拷贝out/target/product/{project}/obj/packaging/ckt75_cu_gb2-target_files-eng.ckt.zip到根目录下，
+./build/tools/releasetools/ota_from_target_files -k build/target/product/security/ckt82_we_kk/releasekey  -i v302.zip v303.zip update_v302_to_v303.zip
+
+
+
+
+
+///
+1：root手机（通过*#*#620000#*#*串号，进入root菜单，点击菜单root） 
+2：执行adb root 
+3：执行adb remount 
+4：执行 adb shell setprop sys.usb.config diag,serial_smd,rmnet_qti_bam,adb 
+5：这时候PC会检测到调制解调器设备，并进行驱动安装 
+6：进去PC的设备管理器，会看到“调制解调器设备”，右键“属性”-> 选择“诊断”->"测试"。这时候会看到调试解调器给手机发命令 
+7：如果要通过超级终端发命令，需要在在调制解调器的属性中查找com口，然后打开这个口就行了，一般是“com20”
+
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+
+专业词缩写:
+AF     自动对焦 (Auto Focus)
+FIFO   先进先出 (First-In-First Out)
+FoV    视野 (Field of view)
+HAL    硬件抽象层 (Hardware Abstraction Layer)
+IQ     图像质量 (Image Quality)
+LSC    镜头阴影校正 (Lens Shading Correction)
+PoR    记录计划 (Plan of Record)
+SoF    帧开始 (Start of Frame)
+WNR    小波降噪 (Wavelet Noise Reduction)
+ZSL    零快门延迟 (Zero Shutter Lag)
+HDR    High-Dynamic Range
+
+--------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------
+收藏网页，看看
+http://www.apkbus.com/android-123802-1-1.html
+
+
+
+
+
