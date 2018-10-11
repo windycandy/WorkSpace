@@ -1,4 +1,4 @@
-package test;
+package com.up.designpattern;
 
 import java.io.IOException;
 import java.util.ArrayList;

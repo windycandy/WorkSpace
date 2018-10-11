@@ -114,6 +114,32 @@ http://www.runoob.com/java/java-multithreading.html
 
 
 Java高并发编程 马士兵
-http://www.cnblogs.com/tenWood/p/9338694.html(网友笔记)
-
-
+http://www.cnblogs.com/tenWood/p/9338694.html(网友视频代码笔记)
+synchronizer(同步器，在多个线程之间互相之间怎么进行通讯，同步等；):
+	同步和非同步方法是否可以同时调用？
+	对业务写方法加锁，对业务读方法不加锁，容易产生脏读问题（dirtyRead）
+	一个同步方法可以调用另外一个同步方法：一个线程已经拥有某个对象的锁，再次申请的时候仍然会得到该对象的锁.
+	重入锁的另外一种情形，继承中子类的同步方法调用父类的同步方法
+	synchronized同步方法如果遇到异常，锁就会被释放
+	volatile关键字　-- jmm（java memory model）
+		volatile并不能保证多个线程共同修改running变量时所带来的不一致问题，也就是说volatile不能替代synchronized
+		（volatile和synchronized区别？
+		volatile只保证可见性，并不保证原子性；
+		synchronized既保证可见性，又保证原子性；但效率要比volatile低不少；
+		如果只需要保证可见性的时候，使用volatile，不要使用synchronized；）
+	使用AtomXXX类  -- 方法原子，注意两个原子方法+起来没有原子性
+	synchronized优化 -- 细粒度的锁执行效率要比粗粒度的锁执行效率要高不少
+	避免将锁定对象的引用变成另外的对象，例子
+	不要以字符串常量作为锁定对象
+	wait和notify使用
+	使用Latch（门闩）替代wait notify来进行通知 -- CountDownLatch，门闩的等待是不需要锁定任何对象的
+	ReentrantLock，重入锁，其实synchronized也是可重入的，但是这把锁是和synchronized是有区别的，
+		ReentrantLock是用新的同步方法写的时候经常用的一个工具；
+		需要注意的是，必须要必须要必须要手动释放锁（重要的事情说三遍）;
+		RenntrantLock的tryLock：
+		ReentrantLock还可以调用lockInterruptibly方法，可以对线程interrupt方法做出响应;
+		ReentrantLock还可以指定为公平锁;默认的synchronized全都是不公平锁；
+		Lock和Condition;--对比两种方式，Condition的方式可以更加精确的指定哪些线程被唤醒
+	ThreadLocal -- 	相当于每个线程都有自己的变量，互相之间不会产生冲突；
+同步容器：jdk提供了同步性的容器，比如concurrentMap，concurrentList，BlockQueen等；->
+ThreadPool：线程池，executor，
