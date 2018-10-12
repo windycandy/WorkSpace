@@ -1,15 +1,16 @@
 package com.up.concurrent;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /*
- * 
+ * 写的代码没有原子性，所以1000是时候停不下来
  */
 
 
 public class TestVolatileExt {
 
-	volatile int i  = 0;
+	volatile AtomicInteger i  = new AtomicInteger(0);
 	volatile boolean flag = true;
 	
 	public static void main(String[] args) {
@@ -19,10 +20,10 @@ public class TestVolatileExt {
 		 
 		 new Thread(()->{
 			 while(t.flag){
-				 t.i++;
+				 t.i.incrementAndGet();
 				 
 				
-				 System.out.println(Thread.currentThread().getName() +  " " +  t.i);
+				 System.out.println(Thread.currentThread().getName() +  " " +  t.i.get());
 			 }
 		 },"t2").start();
 		 
@@ -31,20 +32,20 @@ public class TestVolatileExt {
 
 		 
 		 new Thread(()->{
-			 
-				 
+			 while(true){
+				 if(t.i.get() == 1000){
 					 System.out.println("---------------------");
 					 System.out.println(Thread.currentThread().getName() +  " " +  t.i);
 					 t.flag = false;
-	
+				 }
 				 
-			 
+			 }
 		 },"t1").start();
 		 
 		 System.out.println(Thread.currentThread().getName() +  " " +  t.i);
 		 
 		 try {
-			TimeUnit.SECONDS.sleep(30);
+			TimeUnit.SECONDS.sleep(3);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
