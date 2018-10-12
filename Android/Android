@@ -33,6 +33,15 @@ c、SystemClock.elapsedRealtime()和SystemClock.elapsedRealtimeNanos()表示系�
    
    
 
+
+
+https://blog.csdn.net/u014702999/article/category/6410190
+--Android音频系统之二音频框架
+--Android音频系统之三AudioTrack
+--Android音频系统之四AudioPolicy
+
+
+
 汪国全:
 YY 传你大法
 汪国全:
@@ -49,13 +58,11 @@ CONFIG_SERIAL_MSM_HSL_CONSOLE=y
 音频卡顿可能和performance有关原因   
 
 
-https://blog.csdn.net/u014702999/article/category/6410190
---Android音频系统之二音频框架
---Android音频系统之三AudioTrack
---Android音频系统之四AudioPolicy
 
+java process:
+kill -3 PID  data/anr/
 
-
-
+native process：
+kill -6 PID  data/tombstones 同  debuggerd -b pid
 
 							

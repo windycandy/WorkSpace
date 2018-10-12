@@ -11,7 +11,16 @@ https://www.cnblogs.com/heyonggang/p/9112731.html
 5、HashMap在高并发下如果没有处理线程安全会有怎样的安全隐患，具体表现是什么。
 
 6、java中四种修饰符的限制范围。
+    访问权限   类   包  子类  其他包
+    public     ∨   ∨   ∨     ∨
 
+    protect    ∨   ∨   ∨     ×
+
+    default    ∨   ∨    ×     ×
+
+    private    ∨    ×    ×     ×
+	
+	
 7、Object类中的方法。
 
 8、接口和抽象类的区别，注意JDK8的接口可以有实现。
