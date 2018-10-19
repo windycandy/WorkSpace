@@ -65,4 +65,9 @@ kill -3 PID  data/anr/
 native process：
 kill -6 PID  data/tombstones 同  debuggerd -b pid
 
+
+
+https://blog.csdn.net/ClAndEllen/article/details/79257663
+
+
 							
