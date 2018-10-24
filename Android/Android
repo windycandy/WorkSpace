@@ -21,7 +21,7 @@ AsyncTask防止Memory Leaks(内存泄漏)
 (造成内存泄漏的原因，往大了说，无非就是一些特殊的原因导致Activity在该销毁的时候无法被销毁，
 而AsyncTask在创建的时候会持有当前Activity的引用，所以也有可能导致内存泄漏！)
 https://blog.csdn.net/sinat_35670989/article/details/54139855
-https://blog.csdn.net/u013718120/article/details/53032986?locationNum=6&fps=1
+https://blog.csdn.net/u013718120/article/details/53032986?locationNum=6&fps=1  **
 
 a、System.currentTimeMillis()获取的是系统的时间，可以使用SystemClock.setCurrentTimeMillis(long millis)进行设置。
    如果使用System.currentTimeMillis()来获取当前时间进行计时，应该考虑监听ACTION_TIME_TICK, ACTION_TIME_CHANGED 和 
