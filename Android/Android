@@ -66,8 +66,39 @@ native process：
 kill -6 PID  data/tombstones 同  debuggerd -b pid
 
 
+top
+top 可以简单的查询Cpu 的基本使用情况
+
+Memory Usage, 我们通常会审查，系统当时memory 是否足够, 是否处于low memory 状态, 是否可能出现因无法申请到memory 而卡死的情况.
+adb shell cat proc/meminfo
+
+Storage Usage
+查看Storage 的情况，通常主要是查询data 分区是否已经刷满, sdcard 是否已经刷满, 剩余的空间是否足够。以及是否有产生超大文件等。
+通常使用的命令如 df
+
+
+
+
+内存泄漏：
+80-nj221-1_a_android_memory_leak_analysis_guide.pdf
+hprof + mat 
+ServiceConnection Leak
+
+
+Android Stability Issue Analysis Guide：
+Android ANR(Application Not Responding) Issue
+Android Watchdog Timeout Issue
+Android system_server Crash Issue
+
+StrictMode
+
 
 https://blog.csdn.net/ClAndEllen/article/details/79257663
+
+
+
+
+
 
 
 							

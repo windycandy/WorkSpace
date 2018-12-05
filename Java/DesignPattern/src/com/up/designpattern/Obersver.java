@@ -111,13 +111,13 @@ public class Obersver {
         new Thread(c).start();
         
         String[] observers = PropertyMgr.getProperty("observers").split(",");
-        for(String s : observers) {
+        /*for(String s : observers) {
         	try {
 				System.out.println(Class.forName(s));
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-        }
+        }*/
 	}
 }
